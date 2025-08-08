@@ -42,6 +42,7 @@ func main() {
 	myCommands.CLI = make(map[string]func(*config.State,config.Command) error)
 	myCommands.Register("login", config.HandlerLogin)
 	myCommands.Register("register", config.HandlerRegister)
+	myCommands.Register("reset", config.HandlerReset)
 
 
 	err = myCommands.Run(&myState, CMD)

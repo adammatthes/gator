@@ -79,6 +79,16 @@ func HandlerRegister(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerReset(s *State, cmd Command) error {
+	err := s.Db.ResetUsers(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Users Table successfully reset")
+	return nil
+}
+
 func (c *Config) SetUser(newName string) error {
 	c.DbUrl = os.Getenv("DATABASE_URL")
 	
