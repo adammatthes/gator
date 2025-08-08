@@ -43,6 +43,7 @@ func main() {
 	myCommands.Register("login", config.HandlerLogin)
 	myCommands.Register("register", config.HandlerRegister)
 	myCommands.Register("reset", config.HandlerReset)
+	myCommands.Register("users", config.HandlerUsers)
 
 
 	err = myCommands.Run(&myState, CMD)

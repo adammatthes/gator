@@ -89,6 +89,23 @@ func HandlerReset(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerUsers(s *State, cmd Command) error {
+	results, err := s.Db.GetUsers(context.Background())
+	if err != nil {
+		return nil
+	}
+	
+	for n := 0; n < len(results); n++ {
+		fmt.Printf("* %v", results[n])
+		if results[n] == s.Cfg.Username {
+			fmt.Printf(" (current)")
+		}
+		fmt.Printf("\n")
+	}
+
+	return nil
+}
+
 func (c *Config) SetUser(newName string) error {
 	c.DbUrl = os.Getenv("DATABASE_URL")
 	
