@@ -45,10 +45,10 @@ func main() {
 	myCommands.Register("reset", config.HandlerReset)
 	myCommands.Register("users", config.HandlerUsers)
 	myCommands.Register("agg", config.HandlerAgg)
-	myCommands.Register("addfeed", config.HandlerAddFeed)
+	myCommands.Register("addfeed", config.Middleware(config.HandlerAddFeed))
 	myCommands.Register("feeds", config.HandlerFeeds)
-	myCommands.Register("follow", config.HandlerFollow)
-	myCommands.Register("following", config.HandlerFollowing)
+	myCommands.Register("follow", config.Middleware(config.HandlerFollow))
+	myCommands.Register("following", config.Middleware(config.HandlerFollowing))
 
 
 	err = myCommands.Run(&myState, CMD)

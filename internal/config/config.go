@@ -28,6 +28,7 @@ type State struct {
 type Command struct {
 	Name string
 	Arguments []string
+	Public bool
 }
 
 type Commands struct {
@@ -41,6 +42,18 @@ func (c *Commands) Run(s *State, cmd Command) error {
 
 func (c *Commands) Register(name string, f func(*State, Command) error) {
 	c.CLI[name] = f
+}
+
+func Middleware(handler func(*State, Command, database.User) error) func(*State, Command) error {
+	return func(s *State, cmd Command) error {
+		user, err := s.Db.GetUser(context.Background(), s.Cfg.Username)
+		if err != nil {
+			return err
+		}
+
+		return handler(s, cmd, user)
+	}
+	
 }
 
 func HandlerLogin(s *State, cmd Command) error {
@@ -118,22 +131,19 @@ func HandlerAgg(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerAddFeed(s *State, cmd Command) error {
+func HandlerAddFeed(s *State, cmd Command, user database.User) error {
 	if len(cmd.Arguments) != 2 {
 		return errors.New("Usage: addfeed <feedname> <url>")
 	}
-
-	curr := s.Cfg.Username
-	userstats, err := s.Db.GetUser(context.Background(), curr)
 
 	params := database.AddFeedParams{ID:uuid.New(),
 					 CreatedAt:time.Now(),
 					 UpdatedAt:time.Now(),
 					 Name:cmd.Arguments[0],
 				    	 Url:cmd.Arguments[1],
-				    	 UserID:userstats.ID}
+				    	 UserID:user.ID}
 	
-	_, err = s.Db.AddFeed(context.Background(), params)
+	_, err := s.Db.AddFeed(context.Background(), params)
 	if err != nil {
 		return err
 	}
@@ -141,7 +151,7 @@ func HandlerAddFeed(s *State, cmd Command) error {
 	followParams := database.CreateFeedFollowParams{ID: uuid.New(),
 							CreatedAt: time.Now(),
 							UpdatedAt: time.Now(),
-							UserID: userstats.ID,
+							UserID: user.ID,
 							FeedID: params.ID}
 	
 	_, err = s.Db.CreateFeedFollow(context.Background(), followParams)
@@ -166,15 +176,11 @@ func HandlerFeeds(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerFollow(s *State, cmd Command) error {
+func HandlerFollow(s *State, cmd Command, user database.User) error {
 	if len(cmd.Arguments) != 1 {
 		return errors.New("Usage: follow <feed url>")
 	}
 
-	curr, err := s.Db.GetUser(context.Background(), s.Cfg.Username)
-	if err != nil {
-		return err
-	}
 	currFeed, err := s.Db.GetFeedByUrl(context.Background(), cmd.Arguments[0])
 	if err != nil {
 		return err
@@ -183,7 +189,7 @@ func HandlerFollow(s *State, cmd Command) error {
 	params := database.CreateFeedFollowParams{ID:uuid.New(),
 					      CreatedAt:time.Now(),
 					      UpdatedAt:time.Now(),
-					      UserID:curr.ID,
+					      UserID:user.ID,
 					      FeedID:currFeed.ID}
 	
 	followReturn, err := s.Db.CreateFeedFollow(context.Background(), params)
@@ -197,14 +203,13 @@ func HandlerFollow(s *State, cmd Command) error {
 
 }
 
-func HandlerFollowing(s *State, cmd Command) error {
+func HandlerFollowing(s *State, cmd Command, user database.User) error {
 
-	currUser, err := s.Db.GetUser(context.Background(), s.Cfg.Username)
+
+	feedNames, err := s.Db.GetFeedNameById(context.Background(), user.ID)
 	if err != nil {
 		return err
 	}
-
-	feedNames, err := s.Db.GetFeedNameById(context.Background(), currUser.ID)
 
 	fmt.Printf("%v\n", feedNames)
 
