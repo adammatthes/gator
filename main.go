@@ -44,6 +44,11 @@ func main() {
 	myCommands.Register("register", config.HandlerRegister)
 	myCommands.Register("reset", config.HandlerReset)
 	myCommands.Register("users", config.HandlerUsers)
+	myCommands.Register("agg", config.HandlerAgg)
+	myCommands.Register("addfeed", config.HandlerAddFeed)
+	myCommands.Register("feeds", config.HandlerFeeds)
+	myCommands.Register("follow", config.HandlerFollow)
+	myCommands.Register("following", config.HandlerFollowing)
 
 
 	err = myCommands.Run(&myState, CMD)

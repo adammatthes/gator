@@ -10,7 +10,7 @@ import (
 )
 
 const resetUsers = `-- name: ResetUsers :exec
-TRUNCATE TABLE users
+DELETE FROM users
 `
 
 func (q *Queries) ResetUsers(ctx context.Context) error {
