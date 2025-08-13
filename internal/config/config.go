@@ -8,6 +8,8 @@ import (
 	"errors"
 	"time"
 	"context"
+	"os/signal"
+	"database/sql"
 	"github.com/google/uuid"
 	"github.com/adammatthes/gator/internal/database"
 	"github.com/adammatthes/gator/internal/rss"
@@ -120,13 +122,66 @@ func HandlerUsers(s *State, cmd Command) error {
 	return nil
 }
 
-func HandlerAgg(s *State, cmd Command) error {
-	result, err := rss.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func ScrapeFeeds(s *State) error {
+	nextFeed, err := s.Db.GetNextFeedToFetch(context.Background())
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%v\n", result)
+	nt := sql.NullTime{Time:time.Now(), Valid:true}
+
+	params := database.MarkFeedFetchedParams{ID:nextFeed[0].ID,
+						LastFetchedAt: nt}
+
+	_, err = s.Db.MarkFeedFetched(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	feed, err := s.Db.GetFeedByUrl(context.Background(),nextFeed[0].Url)
+	if err != nil {
+		return err
+	}
+
+	feedContents, err := rss.FetchFeed(context.Background(), feed.Url)
+	if err != nil {
+		return err
+	}
+
+	
+		
+	fmt.Printf("%v\n", feedContents.Channel.Title)
+	
+
+	return nil
+}
+
+func HandlerAgg(s *State, cmd Command) error {
+	if len(cmd.Arguments) != 1 {
+		return errors.New("Usage: agg <time between requests>")
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+
+	go func() {
+		sig := <-sigChan
+		time.Sleep(2 * time.Second)
+		fmt.Printf("Signal: %v caught. Exiting aggregation.\n", sig)
+		os.Exit(0)
+	}()
+
+	time_between_reqs, err := time.ParseDuration(cmd.Arguments[0])
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Collecting feeds every %v\n", time_between_reqs)
+
+	ticker := time.NewTicker(time_between_reqs)
+	for ; ; <-ticker.C {
+		ScrapeFeeds(s)
+	}
 
 	return nil
 }
@@ -212,6 +267,28 @@ func HandlerFollowing(s *State, cmd Command, user database.User) error {
 	}
 
 	fmt.Printf("%v\n", feedNames)
+
+	return nil
+}
+
+func HandlerUnfollow(s *State, cmd Command, user database.User) error {
+	if len(cmd.Arguments) != 1 {
+		return errors.New("Usage: unfollow <feed url>")
+	}
+
+	fid, err := s.Db.GetFeedByUrl(context.Background(), cmd.Arguments[0])
+	if err != nil {
+		return err
+	}
+
+	toRemove := database.RemoveFeedParams{FeedID: fid.ID, UserID: user.ID}
+
+	_, err = s.Db.RemoveFeed(context.Background(), toRemove)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully removed %v from user %v", cmd.Arguments[0], user.Name)
 
 	return nil
 }

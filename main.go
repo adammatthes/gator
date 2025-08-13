@@ -49,6 +49,7 @@ func main() {
 	myCommands.Register("feeds", config.HandlerFeeds)
 	myCommands.Register("follow", config.Middleware(config.HandlerFollow))
 	myCommands.Register("following", config.Middleware(config.HandlerFollowing))
+	myCommands.Register("unfollow", config.Middleware(config.HandlerUnfollow))
 
 
 	err = myCommands.Run(&myState, CMD)
