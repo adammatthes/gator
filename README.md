@@ -20,9 +20,21 @@ A CLI tool to follow and view RSS feeds.
 	- Usage: `register <username>`
 	- Adds a new user to the users table and automatically logs them as the current user
 
+- users
+	- Usage: `users`
+	- Displays a list of all registered users and labels the currently logged-in user
+
+- reset
+	- Usage: `reset`
+	- Clears all users from the users table
+
 - addfeed
 	- Usage: `addfeed <feed url>`
 	- Adds an RSS feed to the feeds table
+
+- feeds
+	- Usage: `feeds`
+	- Displays all feeds currently in the feeds table
 
 - follow
 	- Usage: `follow <feed url>`
