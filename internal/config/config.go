@@ -10,6 +10,8 @@ import (
 	"context"
 	"os/signal"
 	"database/sql"
+	"strconv"
+	"log"
 	"github.com/google/uuid"
 	"github.com/adammatthes/gator/internal/database"
 	"github.com/adammatthes/gator/internal/rss"
@@ -122,6 +124,33 @@ func HandlerUsers(s *State, cmd Command) error {
 	return nil
 }
 
+func HandlerBrowse(s *State, cmd Command, user database.User) error {
+	var limit int32
+
+	if len(cmd.Arguments) == 1 {
+		temp, err := strconv.ParseInt(cmd.Arguments[0], 10, 32)
+		if err != nil {
+			return err
+		}
+		limit = int32(temp)
+	} else {
+		limit = int32(2)
+	}
+
+	params := database.GetPostsForUserParams{UserID: user.ID, Limit: limit}
+
+	results, err := s.Db.GetPostsForUser(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v\n", results)
+
+	return nil
+
+
+}
+
 func ScrapeFeeds(s *State) error {
 	nextFeed, err := s.Db.GetNextFeedToFetch(context.Background())
 	if err != nil {
@@ -148,11 +177,25 @@ func ScrapeFeeds(s *State) error {
 		return err
 	}
 
-	
-		
-	fmt.Printf("%v\n", feedContents.Channel.Title)
-	
+	for _, p := range feedContents.Channel.Item {
+		PT, err := time.Parse(time.RFC1123Z, p.PubDate)
+		if err != nil {
+			log.Output(1, fmt.Sprintf("%v",err))
+		}
+		postparams := database.CreatePostParams{ID: uuid.New(),
+					  CreatedAt: time.Now(),
+				  	  UpdatedAt: time.Now(),
+					  Title: sql.NullString{String:p.Title, Valid: true},
+					  Url: sql.NullString{String: p.Link, Valid: true},
+					  Description: sql.NullString{String: p.Description, Valid: true},
+					  PublishedAt: PT,
+					  FeedID: uuid.NullUUID{UUID: feed.ID, Valid: true}}
 
+		_, err = s.Db.CreatePost(context.Background(), postparams)
+		if err != nil {
+			log.Output(1, fmt.Sprintf("%v",err))
+		}
+	}
 	return nil
 }
 
